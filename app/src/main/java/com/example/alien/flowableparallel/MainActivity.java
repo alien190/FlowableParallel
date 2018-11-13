@@ -5,8 +5,11 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 
+import org.reactivestreams.Subscription;
+
 import io.reactivex.Flowable;
-import io.reactivex.schedulers.Schedulers;
+import io.reactivex.functions.Consumer;
+import io.reactivex.processors.PublishProcessor;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "FlowableParallelResults";
@@ -21,17 +24,26 @@ public class MainActivity extends AppCompatActivity {
 
     @SuppressLint("CheckResult")
     private void startParallel() {
-        Flowable<Integer> ids = Flowable.fromCallable(this::getId)
-                .repeat()
-                .take(100)
-                .map(this::slowLoadSeq)
-                .parallel(4)
-                .runOn(Schedulers.io())
-                .map(this::slowLoadParallel)
-                .sequential();
+        PublishProcessor<Integer> publishProcessor = PublishProcessor.create();
+        Flowable<Integer> ids = Flowable.fromPublisher(publishProcessor);
+        //ids.subscribe();
+        publishProcessor.onNext(1);
+//        Flowable<Integer> ids = Flowable.fromCallable(this::getId)
+//                //.repeat()
+//                //.take(100)
+//                .map(this::slowLoadSeq)
+//                .parallel(4)
+//                .runOn(Schedulers.io())
+//                .map(this::slowLoadParallel)
+//                .sequential();
 
 
-        ids.subscribe(this::showResults);
+        ids.subscribe(this::showResultsOne);
+        //publishProcessor.subscribe(this::showResultsOne);
+        publishProcessor.onNext(2);
+        publishProcessor.onNext(3);
+        ids.subscribe(this::showResultsTwo);
+        publishProcessor.onNext(4);
     }
 
     private Integer getId() {
@@ -60,7 +72,11 @@ public class MainActivity extends AppCompatActivity {
         return id;
     }
 
-    private void showResults(int id) {
-        Log.d(TAG, "showResults: " + id);
+    private void showResultsOne(int id) {
+        Log.d(TAG, "showResultsOne 1: " + id);
+    }
+
+    private void showResultsTwo(int id) {
+        Log.d(TAG, "showResultsOne 2: " + id);
     }
 }
